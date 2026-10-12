@@ -2,6 +2,14 @@
 
 set -euo pipefail
 
+podman() {
+    mkdir -p -- "${ROOT}/out/podman/tmp"
+    TMPDIR="${ROOT}/out/podman/tmp" command podman \
+        --root "${ROOT}/out/podman/storage" \
+        --runroot "${ROOT}/out/podman/run" \
+        --tmpdir "${ROOT}/out/podman/state" "$@"
+}
+
 compiler() {
     local COMPILER="$1" ARG SEED="link"
     local ROOT="/var/tmp/build/passlit" DATE TIME
@@ -322,11 +330,10 @@ package() (
     ZOPFLI="${TOOLS}/bin/zopfli"
     ADVZIP="${TOOLS}/bin/advzip"
 
-    cp -- "${SOURCE_ROOT}/passlit-${VERSION}.tar.xz" "$OUTPUT"
     tar --no-same-owner -xf "${OUTPUT}/passlit-${VERSION}.tar.xz" -C "$WORK"
     SOURCE="${WORK}/passlit-${VERSION}"
     make -C "$SOURCE" archive
-    cp -- "${SOURCE}/passlit-${VERSION}.tar.xz" "$OUTPUT"
+    mv -- "${SOURCE}/passlit-${VERSION}.tar.xz" "$OUTPUT"
     export CFLAGS="-Os -fvect-cost-model=cheap"
     CFLAGS+=" --sysroot=${BUILD}/toolchain/sysroot"
     CFLAGS+=" -frandom-seed=passlit"
@@ -508,8 +515,7 @@ MAP
 )
 
 distclean() {
-    local ROOT BUILD OUTPUT ID MOUNT IMAGE IDS FORMAT
-    local IMAGES=("localhost/passlit-builder:latest")
+    local ROOT BUILD OUTPUT MOUNT
 
     ROOT="$(pwd -P)"
     BUILD="$(realpath -m -- "${BUILD_DIR:-out/release}")"
@@ -521,25 +527,10 @@ distclean() {
         fi
     done
 
-    if [[ -s out/builder.image ]]; then
-        IMAGES+=("$(cat -- out/builder.image)")
+    if [[ -d "${ROOT}/out/podman/storage" ]]; then
+        podman stop --all --time 2
+        podman system reset --force
     fi
-    FORMAT='{{range .Mounts}}'
-    FORMAT+='{{if eq .Destination "/usr/local/src/passlit"}}'
-    FORMAT+='{{.Source}}{{end}}{{end}}'
-    IDS="$(podman ps --all --quiet)"
-    for ID in $IDS; do
-        MOUNT="$(podman inspect --format "$FORMAT" "$ID")"
-        if [[ "$MOUNT" == "$ROOT" ]]; then
-            podman stop --time 2 "$ID"
-            podman rm --ignore "$ID"
-        fi
-    done
-    for IMAGE in "${IMAGES[@]}"; do
-        if podman image exists "$IMAGE"; then
-            podman rmi "$IMAGE"
-        fi
-    done
     make distclean
     rm -rf -- "$BUILD" "$OUTPUT" "${ROOT}/out"
 }
@@ -549,7 +540,7 @@ host() {
     source "$(dirname -- "${BASH_SOURCE[0]}")/sources.sh"
     MODE="${1:-all}"
     [[ "$MODE" == "all" || "$MODE" == "package" ]] || exit 64
-    ROOT="$(pwd)"
+    ROOT="$(pwd -P)"
     BUILD="$(realpath -m -- "${BUILD_DIR:-out/release}")"
     OUTPUT="$(realpath -m -- "${OUTPUT_DIR:-out/artifacts}")"
     TOOLS="${BUILD}/packaging"
@@ -569,21 +560,20 @@ host() {
     trap 'exit 143' TERM
     mkdir -p -- "$BUILD" "$OUTPUT" "$TOOLS" out/downloads
 
-    if [[ "$MODE" == "all" ]]; then
-        for NAME in "${!ARCHIVES[@]}"; do
-            FILE="${ARCHIVES[$NAME]}"
-            HASH="${HASHES[$NAME]}"
-            URL="${URLS[$NAME]}"
-            if [[ ! -f "out/downloads/${FILE}" ]]; then
-                curl --fail --location --retry 3 --retry-all-errors \
-                    --output "out/downloads/${FILE}.tmp" -- "$URL"
-                mv -- "out/downloads/${FILE}.tmp" "out/downloads/${FILE}"
-            fi
-            printf "%s  %s\n" "$HASH" "out/downloads/${FILE}" | sha256sum -c -
-        done
-    fi
+    for NAME in "${!ARCHIVES[@]}"; do
+        FILE="${ARCHIVES[$NAME]}"
+        HASH="${HASHES[$NAME]}"
+        URL="${URLS[$NAME]}"
+        if [[ ! -f "out/downloads/${FILE}" ]]; then
+            curl --fail --location --retry 3 --retry-all-errors \
+                --output "out/downloads/${FILE}.tmp" -- "$URL"
+            mv -- "out/downloads/${FILE}.tmp" "out/downloads/${FILE}"
+        fi
+        printf "%s  %s\n" "$HASH" "out/downloads/${FILE}" | sha256sum -c -
+    done
 
-    if [[ ! -f out/builder.image ]]; then
+    if [[ ! -s out/builder.image ]] ||
+            ! podman image exists "$(cat out/builder.image)"; then
         podman build --force-rm -t passlit-builder release
         podman image inspect --format "{{.Id}}" passlit-builder \
             > out/builder.image
@@ -603,12 +593,13 @@ host() {
     }
 
     printf "%s\n" "Container build: ${BUILD}; packaging tools: ${TOOLS}" >&2
-    if [[ "$MODE" == "all" ]]; then
-        run --network=none "$IMAGE" -c \
-            'bash release/build.sh --toolchain && bash release/build.sh --deps'
-        run "$IMAGE" release/build.sh --tools
-    fi
+    run --network=none "$IMAGE" -c \
+        'bash release/build.sh --toolchain && bash release/build.sh --deps'
+    run "$IMAGE" release/build.sh --tools
+
     make archive
+    VERSION="$(make --no-print-directory -s version)"
+    mv -- "passlit-${VERSION}.tar.xz" "$OUTPUT"
     printf "%s\n" "Container artifacts: ${OUTPUT}" >&2
     run --network=none "$IMAGE" release/build.sh --package
 }

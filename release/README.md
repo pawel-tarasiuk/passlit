@@ -10,7 +10,10 @@ Needs Podman, GNU Make and curl. From the project root:
 bash release/build.sh
 bash release/build.sh distclean  # Remove outputs and builder images.
 bash release/build.sh rebuild  # Clean everything, then build.
-bash release/build.sh package  # Repackage an existing build.
+bash release/build.sh package  # Same; reuse completed build stages.
 ```
 
+Missing prerequisites are built automatically.
+
 Six artifacts and `SHA256SUMS`: `out/artifacts/`.
+Toolkit, downloads and Podman storage also stay under `out/`.

@@ -6,8 +6,8 @@ C99 library and tool. Exact GMP counts, uniform sampling. OpenSSL randomness.
 
 ## Build
 
-GCC with `-fhardened`, GNU Make 4.3+, GMP and OpenSSL headers and libraries.
-Settings: `config.mk`. Clean before changing them.
+Designed for GCC, GNU Make 4.3+, GMP and OpenSSL headers and libraries.
+Settings: `config.mk`. Clean before changing them. Example verbs and variables:
 
 ```sh
 make
@@ -23,7 +23,22 @@ Installs the tool, library, header, man pages, licenses and `passlit.pc`.
 Use `pkg-config --cflags --libs passlit` for linking.
 Release artifacts: [release/README.md](release/README.md).
 
-## Use
+## Python installation
+
+Python releases include `.whl` files that require Linux with glibc 2.39+,
+CPython 3.13+ and an x86-64-v3 capable CPU.
+
+For a source build using the compiler's default architecture:
+
+```sh
+ARCH_FLAGS="" python3 -m pip install \
+    "git+https://github.com/pawel-tarasiuk/passlit.git@main#subdirectory=python"
+```
+
+Build needs the build dependencies above, Git and Python headers. Pip installs
+its Python build dependencies.
+
+## Usage
 
 ```sh
 ./passlit  # 128 bits, rounded down
