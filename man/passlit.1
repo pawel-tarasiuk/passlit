@@ -1,0 +1,163 @@
+.TH passlit 1 "" "passlit 0.0.1"
+.SH NAME
+passlit \- utility to create passwords and codes that feel good to read,
+type and print.
+.SH SYNOPSIS
+.B passlit
+.RI [ options ]
+.SH DESCRIPTION
+Write one sample per line to standard output.
+Sample uniformly from all strings satisfying the selected constraints,
+using exact integer counts and secure randomness.
+Sampling is with replacement: duplicates are possible.
+.PP
+Defaults: one sample, alphabet U*L*D*O*, 128 bits rounded down.
+.SH OPTIONS
+.TP
+.B \-g, \-\-generate
+Generate samples (default).
+.TP
+.B \-e, \-\-encode
+Read whitespace-separated zero-based ranks from standard input; write
+one sample per line.
+.TP
+.B \-r, \-\-rank
+Read whitespace-separated samples from standard input; write their
+zero-based ranks, one per line.
+Invalid samples produce -1. Invalid ranks produce an empty output line.
+Both modes report invalid inputs on standard error, continue, and exit 65.
+The alphabet, selected length and pattern policy must match in both directions.
+.TP
+.B \-t, \-\-test
+Validate the configuration without adjusting its length. Print the selected
+length, exact scope size and entropy_bits: floor and ceiling of log2(scope).
+No randomness is consumed.
+.TP
+.B \-d, \-\-decimal
+Use decimal ranks (default), with encode or rank.
+.TP
+.B \-x, \-\-hex
+Use lowercase hexadecimal ranks. Output has a 0x prefix and enough leading
+zeros to fit the largest valid rank. Input accepts either case for digits,
+with an optional 0x, 0X, x or X prefix.
+.TP
+.BI "\-a, \-\-alphabet " SET
+Select character groups; see ALPHABET.
+.TP
+.BI "\-c, \-\-custom " POOL
+Supply characters for c or c*; does not enable the group by itself.
+At most 256 non-whitespace bytes.
+Duplicates and overlap with enabled built-in groups are removed.
+.TP
+.BI "\-l, \-\-length " N
+Set a positive sample length. Cannot be combined with \-b or \-R.
+In generate mode, if too short for required groups, use the minimum instead,
+warn on standard error, and exit with status 65 after writing the batch.
+Maximum: system page size clamped to 4096\-65536.
+.TP
+.BI "\-b, \-\-bits " N
+Set a nonnegative bit target (default 128); see ROUNDING.
+.TP
+.BI "\-R, \-\-round " MODE
+Use down or 0 (default), or up or 1 for bit targets.
+.TP
+.BI "\-n, \-\-number " N
+Write N samples in generate mode (default: 1).
+.TP
+.BI "\-j, \-\-jobs " N
+Use N workers (default: 0, automatic). Zero selects half the online CPUs,
+with a minimum of one; builds without threads use one. Explicit N above
+one requires a build with thread support.
+Seeded samples and their order match sequential output.
+Batches smaller than 256 samples run sequentially.
+Encode and rank process stdin in bounded batches using the same workers.
+Output and error reports retain input order.
+.TP
+.B \-P, \-\-reject-patterns
+Enable local pattern rules (default): at most three identical characters
+or four characters from one group consecutively, and no adjacent repeated
+bigram (abab) or trigraph (abcabc).
+The group limit applies only when multiple groups are available.
+Singleton alphabets bypass the rules; the CLI warns and returns 65 if needed.
+Counts and bit targets include the enabled rules.
+.TP
+.B \-p, \-\-allow-patterns
+Disable local pattern rules. Seeded output depends on the policy;
+\-p retains the previous sequences.
+.TP
+.BI "\-s, \-\-seed " TEXT
+Generate reproducible samples instead of using secure randomness.
+The same seed and configuration reproduce the batch for this algorithm
+version. Sample indices start at zero; longer batches retain their prefix.
+.TP
+.B \-V, \-\-version
+Show version.
+.TP
+.B \-h, \-\-help
+Show usage.
+.SH ALPHABET
+Concatenate selectors without spaces. Uppercase selectors choose standard
+pools; lowercase selectors choose full ASCII groups, except c (custom).
+.TP
+.B U / u
+ACEFHKLMNPRTVXYZ / A\-Z
+.TP
+.B L / l
+abcdefghkmnpqstvxyz / a\-z
+.TP
+.B D / d
+34679 / 0\-9
+.TP
+.B O / o
+_\-.^+=?* / all ASCII punctuation
+.TP
+.B c
+Custom pool supplied with \-c.
+.PP
+Omitted groups are excluded. Each group may appear only once;
+standard and full variants are mutually exclusive.
+Append * to require at least one character from that group.
+For c*, this means a character remaining after overlap removal.
+An empty required pool is impossible.
+.PP
+Quote selectors and pools to prevent shell expansion.
+For example, "U*D" requires uppercase letters but leaves digits optional.
+.SH ROUNDING
+For the number S of valid strings at a given length, compare S with
+2**N exactly. Down chooses the longest length with S <= 2**N;
+up chooses the shortest length with S >= 2**N.
+An unattainable target or length is an error.
+.PP
+A singleton alphabet supports explicit lengths and zero bits rounded up.
+Positive bits rounded up are impossible; downward rounding has no finite
+longest length.
+.SH SEEDS
+Predictable seeds give predictable samples. Bit targets describe the sample
+space, not seed strength. Command-line seeds may appear in shell history
+or process arguments.
+.SH EXAMPLES
+.nf
+passlit
+passlit \-a "U*L*D*O*" \-l 22 \-n 1000
+passlit \-a "D*c*" \-c "xyz" \-b 128 \-R up
+passlit \-\-seed "example" \-n 10
+.fi
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 64
+Invalid arguments or configuration.
+.TP
+.B 65
+Length increased, singleton rules relaxed, impossible constraints,
+or no supported length fits.
+.TP
+.B 71
+Allocation failure. GMP allocation failures abort instead.
+.TP
+.B 74
+Random-source or output failure.
+.SH SEE ALSO
+.BR passlit (3)

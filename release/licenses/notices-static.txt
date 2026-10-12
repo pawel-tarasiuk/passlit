@@ -1,0 +1,16 @@
+The executable incorporates:
+
+GMP @GMP_VERSION@: LGPLv3 or later (the LGPL option of its dual license).
+See GMP.txt and COPYING.md.
+
+OpenSSL @OPENSSL_VERSION@: Apache License 2.0. See OpenSSL.txt.
+
+glibc @GLIBC_VERSION@: LGPLv2.1 or later, with additional component notices.
+See glibc.txt and glibc-NOTICES.txt.
+
+GCC runtime code: GPLv3 or later with the GCC Runtime Library Exception 3.1.
+See COPYING.md and GCC.RUNTIME.
+
+libpasslit.a.0 contains passlit objects, not dependency archives.
+Source and relinking material accompany the release under dist/sources and
+dist/relink, alongside the retained builder described in BUILD.md.

@@ -1,0 +1,12 @@
+ARG HASH=918311b7b6c4c6f68b232ba516584925f6c78ad82b6fd534b98979df6438e483
+FROM debian@sha256:${HASH}
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash binutils bison build-essential ca-certificates curl gawk \
+    make perl pkg-config python3 rsync texinfo xz-utils \
+    tar git libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
+    libffi-dev liblzma-dev libncurses-dev uuid-dev tk-dev \
+    && dpkg-query -W > /packages.lock \
+    && rm -rf /var/lib/apt/lists/*
+ENV LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=1791504000
+WORKDIR /usr/local/src/passlit
+ENTRYPOINT ["bash"]

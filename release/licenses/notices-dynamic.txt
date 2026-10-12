@@ -1,0 +1,9 @@
+The executable uses system GMP, OpenSSL and glibc shared libraries.
+Their library implementations are not bundled in this package.
+
+GCC startup code is linked into the executable: GPLv3 or later with the
+GCC Runtime Library Exception 3.1. See COPYING.md and GCC.RUNTIME.
+The glibc x86-64 startup code grants unrestricted distribution of programs
+linked with its compiled objects.
+
+libpasslit.a.0 contains passlit objects, not dependency archives.

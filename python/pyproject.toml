@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=77", "wheel", "Cython>=3.2,<4"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "passlit"
+dynamic = ["version"]
+description = "Passwords and codes that feel good to read, type and print."
+requires-python = ">=3.13"
+license = "LGPL-3.0-only"
+license-files = ["LICENSE.md", "COPYING.md", "COPYING.LESSER.md"]
+
+[tool.pylint.main]
+extension-pkg-allow-list = ["passlit"]

@@ -1,0 +1,2 @@
+include Makefile exports.map passlit.pyx test_passlit.py README.txt
+include LICENSE.md COPYING.md COPYING.LESSER.md

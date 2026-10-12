@@ -1,0 +1,195 @@
+.TH passlit 3 "" "passlit 0.0.1"
+.SH NAME
+passlit \- sample readable passwords and codes
+.SH SYNOPSIS
+.nf
+#include <passlit.h>
+
+struct passlit_config \fBpasslit_configure\fP(const char *\fIgroups\fP, const \
+char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        const char *\fIseed\fP, uint64_t \fIsample_index\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+
+int \fBpasslit_generate\fP(char *\fIout\fP, size_t \fIout_size\fP,
+        const struct passlit_config *\fIconfig\fP);
+int \fBpasslit_generatep\fP(char **\fIoutp\fP, const struct passlit_config \
+*\fIconfig\fP);
+
+int \fBpasslit_generate2\fP(char *\fIout\fP, size_t \fIout_size\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        const char *\fIseed\fP, uint64_t \fIsample_index\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+int \fBpasslit_generatep2\fP(char **\fIoutp\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        const char *\fIseed\fP, uint64_t \fIsample_index\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+
+int \fBpasslit_scope\fP(mpz_t \fItotal\fP, size_t *\fIlength\fP,
+        const struct passlit_config *\fIconfig\fP);
+int \fBpasslit_encode\fP(char *\fIout\fP, size_t \fIout_size\fP, mpz_t \
+*\fIranks\fP,
+        const struct passlit_config *\fIconfig\fP);
+int \fBpasslit_encodep\fP(char **\fIoutp\fP, mpz_t *\fIranks\fP,
+        const struct passlit_config *\fIconfig\fP);
+int \fBpasslit_rank\fP(mpz_t *\fIout\fP, const char *const *\fIsamples\fP,
+        const struct passlit_config *\fIconfig\fP);
+
+int \fBpasslit_rankp\fP(mpz_t **\fIoutp\fP, const char *const *\fIsamples\fP,
+        const struct passlit_config *\fIconfig\fP);
+
+int \fBpasslit_scope2\fP(mpz_t \fItotal\fP, size_t *\fIlength\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        int \fIpatterns\fP);
+int \fBpasslit_encode2\fP(char *\fIout\fP, size_t \fIout_size\fP, mpz_t \
+*\fIranks\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+int \fBpasslit_encodep2\fP(char **\fIoutp\fP, mpz_t *\fIranks\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+int \fBpasslit_rank2\fP(mpz_t *\fIout\fP, const char *const *\fIsamples\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+int \fBpasslit_rankp2\fP(mpz_t **\fIoutp\fP, const char *const *\fIsamples\fP,
+        const char *\fIgroups\fP, const char *\fIcustom\fP,
+        enum passlit_size_kind \fIsize_kind\fP, size_t \fIsize_val\fP,
+        int \fIpatterns\fP, size_t \fIcount\fP, size_t \fIworkers\fP);
+
+.fi
+.PP
+Compiler and linker flags:
+.B pkg-config --cflags --libs passlit
+.SH DESCRIPTION
+Sample uniformly with replacement using exact integer counts. Initialize
+configuration with \fBPASSLIT_DEFAULT_CONFIG\fP, then change fields. The config
+pointer is required and must not alias the output.
+.PP
+The generation functions prepare counts once per batch. Suffix 2 accepts
+individual configuration fields; suffix p allocates output.
+.SH ORDINALS
+\fBpasslit_scope\fP returns the exact count and selected length. Initialize its
+GMP integer before calling; failure clears both outputs.
+.PP
+\fBpasslit_encode\fP and \fBpasslit_encodep\fP convert config.count GMP
+integers to packed samples. Ranks range from zero through scope minus one.
+Input ranks are not modified. Invalid ranks fail the batch and clear the
+output. The allocating variant returns \fBNULL\fP on failure; release its
+successful result with \fBfree\fP().
+.PP
+\fBpasslit_rank\fP converts an array of config.count string pointers into
+initialized GMP integers. Each invalid sample (including a \fBNULL\fP pointer)
+gets -1; valid entries are retained. Any invalid sample returns
+\fBPASSLIT_RANGE\fP. Configuration errors set all outputs to -1. The caller
+initializes and clears every integer.
+.PP
+\fBpasslit_rankp\fP allocates and initializes the array. Invalid samples retain
+the array, with -1 entries, and return \fBPASSLIT_RANGE\fP. Setup failures
+leave \fBNULL\fP; count zero also returns \fBNULL\fP on success. Clear all
+config.count integers with \fBmpz_clear\fP(), then release the array with
+\fBfree\fP().
+.PP
+\fBpasslit_configure\fP returns a config by value, borrowing the string
+pointers. It packs fields without validation. Every suffix-2 wrapper uses it
+and then calls the corresponding config-based function. Conversion wrappers
+omit seed and sample_index; \fBpasslit_scope2\fP also omits count and workers.
+.PP
+Scope and conversion do not use seed or sample_index. Encoding and ranking use
+config.workers with the same automatic selection and small-batch cutoff as
+generation. Each worker owns its output slots; input order is preserved. Use
+the same alphabet, size and pattern policy for both directions. Ordinal
+ordering is implementation-defined; preserve the algorithm version when storing
+ranks.
+.SH CONFIGURATION
+.TP
+.B groups, custom
+Character selectors and optional custom pool; see ALPHABET in
+.BR passlit (1).
+\fBNULL\fP groups selects U*L*D*O*. An empty string is invalid. Custom pools
+accept at most 256 non-whitespace bytes. Duplicates and overlap with enabled
+built-in pools are removed.
+.TP
+.B size_kind, size_val
+\fBPASSLIT_LENGTH\fP selects a positive length. \fBPASSLIT_BITS_DOWN\fP selects
+the longest length whose valid space has at most 2**size_val strings;
+\fBPASSLIT_BITS_UP\fP selects the shortest with at least that many. Defaults:
+\fBPASSLIT_BITS_DOWN\fP and 128. Lengths are limited to the system page size
+clamped to 4096 through 65536. Impossible targets fail; the library does not
+increase explicit lengths.
+.TP
+.B patterns
+Nonzero (default 1) limits identical-character runs to three, group runs to
+four, and forbids adjacent repeated bigrams and trigraphs. Group runs are
+unrestricted with one group; singleton pools bypass rules. 0 disables these
+constraints.
+.TP
+.B seed, sample_index
+\fBNULL\fP seed uses secure randomness. Other strings select deterministic
+sampling, starting at sample_index (default zero). Empty seeds are valid.
+Predictable seeds add no entropy; bit targets describe the sample space.
+Strings end at the first null terminator.
+.TP
+.B count, workers
+Default count is one. Zero workers selects half the online CPUs, minimum one;
+builds without thread support use one. Explicit workers above one require
+thread support. Batches below 256 samples remain serial. Seeded results and
+ordering do not depend on worker count.
+.SH OUTPUT
+Generation returns equal-length strings packed as
+.nf
+    sample\e0sample\e0\e0
+.fi
+For length L, reserve count * (L + 1) + 1 bytes, including the final sentinel.
+Zero count returns one zero byte. The allocating functions return storage owned
+by the caller; release it with
+.BR free (3).
+On generation or encoding failure, allocating functions set *outp to
+\fBNULL\fP; buffer functions clear a valid nonempty buffer. No partial packed
+result is returned.
+.SH RETURN VALUE
+Status-returning functions return \fBPASSLIT_OK\fP on success, otherwise:
+.TP
+.B PASSLIT_INVALID
+Invalid arguments or configuration.
+.TP
+.B PASSLIT_RANGE
+Insufficient capacity, impossible constraints, unsupported length or overflow.
+.TP
+.B PASSLIT_MEMORY
+Allocation failure. GMP allocation failures abort instead.
+.TP
+.B PASSLIT_RANDOM
+Random-source failure.
+.SH EXAMPLE
+.nf
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <passlit.h>
+
+int main(void) {
+    struct passlit_config config = \fBPASSLIT_DEFAULT_CONFIG\fP;
+    char *samples, *sample;
+    int status;
+
+    config.count = 10;
+    status = \fBpasslit_generatep\fP(&samples, &config);
+    if (status != \fBPASSLIT_OK\fP) {
+        return status;
+    }
+    for (sample = samples; *sample; sample += \fBstrlen\fP(sample) + 1) {
+        \fBputs\fP(sample);
+    }
+    \fBfree\fP(samples);
+    return 0;
+}
+.fi
+.SH SEE ALSO
+.BR passlit (1)
